@@ -93,8 +93,6 @@ enum InsertPosition {
   asChild,
 }
 
-const _spaceSize = 32.0;
-
 /// A Stateless widget that represents a nested reorderable list.
 ///
 /// It takes a list of [DragAndDropItem]s, a [DragAndDropItemBuilder]
@@ -110,6 +108,8 @@ class NestedReorderableList<T> extends StatelessWidget {
     this.dropTargetSize = 8.0,
     this.debugShowDragTarget = false,
     this.draggableBehaviour = DraggableBehaviour.longPress,
+    this.spaceSize = 32.0,
+    this.onlyVerticalDrag = false,
   });
 
   /// The items of the list.
@@ -133,6 +133,12 @@ class NestedReorderableList<T> extends StatelessWidget {
   // Whether dragging should start instantly or after a long press. Under the hood it switches between a `Draggable` and a `LongPressDraggable`
   final DraggableBehaviour draggableBehaviour;
 
+  // The space added on the left for each depth-level
+  final double spaceSize;
+
+  // Wether or not the dragging should be restricted to the vertical axis
+  final bool onlyVerticalDrag;
+
   @override
   Widget build(BuildContext context) {
     return _NestedReorderableList<T>(
@@ -143,6 +149,8 @@ class NestedReorderableList<T> extends StatelessWidget {
       dropTargetSize: dropTargetSize,
       debugShowDragTarget: debugShowDragTarget,
       draggableBehaviour: draggableBehaviour,
+      spaceSize: spaceSize,
+      onlyVerticalDrag: onlyVerticalDrag,
     );
   }
 }
@@ -161,6 +169,8 @@ class _NestedReorderableList<T> extends StatefulWidget {
     required this.dropTargetSize,
     required this.debugShowDragTarget,
     required this.draggableBehaviour,
+    required this.spaceSize,
+    required this.onlyVerticalDrag,
   });
   final List<DragAndDropItem<T>> dragAndDropItems;
   final DragAndDropItemBuilder<T> itemBuilder;
@@ -169,6 +179,8 @@ class _NestedReorderableList<T> extends StatefulWidget {
   final double dropTargetSize;
   final bool debugShowDragTarget;
   final DraggableBehaviour draggableBehaviour;
+  final double spaceSize;
+  final bool onlyVerticalDrag;
 
   @override
   _NestedReorderableListState<T> createState() => _NestedReorderableListState();
@@ -216,7 +228,7 @@ class _NestedReorderableListState<T> extends State<_NestedReorderableList<T>> {
       children: [
         Row(
           children: [
-            SizedBox(width: level * _spaceSize),
+            SizedBox(width: level * widget.spaceSize),
             Expanded(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -384,7 +396,7 @@ class _NestedReorderableListState<T> extends State<_NestedReorderableList<T>> {
                           ? 0
                           : level) +
                       (insertPosition == InsertPosition.asChild ? 1 : 0)) *
-                  _spaceSize,
+                  widget.spaceSize,
             ),
             Expanded(
               child: Stack(
@@ -456,6 +468,7 @@ class _NestedReorderableListState<T> extends State<_NestedReorderableList<T>> {
   }) {
     if (widget.draggableBehaviour == DraggableBehaviour.instant) {
       return Draggable<Map<String, dynamic>>(
+        axis: widget.onlyVerticalDrag ? Axis.vertical : null,
         data: {
           'category': category,
           'index': index,
@@ -466,7 +479,9 @@ class _NestedReorderableListState<T> extends State<_NestedReorderableList<T>> {
           elevation: 8,
           child: ConstrainedBox(
             constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width - level * 30.0,
+              maxWidth:
+                  MediaQuery.of(context).size.width -
+                  level * (widget.spaceSize - 2.0),
             ),
             child: Material(child: widget.itemBuilder(context, category)),
           ),
@@ -502,6 +517,7 @@ class _NestedReorderableListState<T> extends State<_NestedReorderableList<T>> {
     }
 
     return LongPressDraggable<Map<String, dynamic>>(
+      axis: widget.onlyVerticalDrag ? Axis.vertical : null,
       data: {
         'category': category,
         'index': index,
@@ -512,7 +528,7 @@ class _NestedReorderableListState<T> extends State<_NestedReorderableList<T>> {
         elevation: 8,
         child: ConstrainedBox(
           constraints: BoxConstraints(
-            maxWidth: MediaQuery.of(context).size.width - level * 30.0,
+            maxWidth: MediaQuery.of(context).size.width - level * 10.0,
           ),
           child: Material(child: widget.itemBuilder(context, category)),
         ),
