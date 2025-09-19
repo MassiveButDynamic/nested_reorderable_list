@@ -4,21 +4,20 @@ import 'package:flutter/material.dart';
 ///
 /// It takes a [BuildContext] and a [DragAndDropItem] as input parameters
 /// and returns a [Widget].
-typedef DragAndDropItemBuilder<T> = Widget Function(
-  BuildContext context,
-  DragAndDropItem<T> item,
-);
+typedef DragAndDropItemBuilder<T> =
+    Widget Function(BuildContext context, DragAndDropItem<T> item);
 
 /// A type definition for a function that's called
 /// when a drag operation finishes.
 ///
 /// It takes a [SourceLocation], a [DestinationLocation],
 /// and a [DragAndDropItem] as parameters.
-typedef OnDragFinish<T> = void Function(
-  SourceLocation source,
-  DestinationLocation destination,
-  DragAndDropItem<T> movedItem,
-);
+typedef OnDragFinish<T> =
+    void Function(
+      SourceLocation source,
+      DestinationLocation destination,
+      DragAndDropItem<T> movedItem,
+    );
 
 /// Class representing an item in the drag and drop operation.
 ///
@@ -29,8 +28,9 @@ class DragAndDropItem<T> {
     required this.key,
     required this.content,
     List<DragAndDropItem<T>>? children,
-  }) : children =
-            children != null ? List<DragAndDropItem<T>>.from(children) : [];
+  }) : children = children != null
+           ? List<DragAndDropItem<T>>.from(children)
+           : [];
 
   /// The content of the item.
   final T content;
@@ -47,10 +47,7 @@ class DragAndDropItem<T> {
 /// It contains the [parentIndex] and the [index] of the item
 /// in the source location.
 class SourceLocation {
-  SourceLocation({
-    required this.parentIndex,
-    required this.index,
-  });
+  SourceLocation({required this.parentIndex, required this.index});
 
   /// The index of the parent of the item.
   final int? parentIndex;
@@ -112,6 +109,7 @@ class NestedReorderableList<T> extends StatelessWidget {
     this.showDragTargetOnlyDuringDrag = false,
     this.dropTargetSize = 8.0,
     this.debugShowDragTarget = false,
+    this.draggableBehaviour = DraggableBehaviour.longPress,
   });
 
   /// The items of the list.
@@ -132,6 +130,9 @@ class NestedReorderableList<T> extends StatelessWidget {
   /// Whether to enable debug mode.
   final bool debugShowDragTarget;
 
+  // Whether dragging should start instantly or after a long press. Under the hood it switches between a `Draggable` and a `LongPressDraggable`
+  final DraggableBehaviour draggableBehaviour;
+
   @override
   Widget build(BuildContext context) {
     return _NestedReorderableList<T>(
@@ -141,6 +142,7 @@ class NestedReorderableList<T> extends StatelessWidget {
       showDragTargetOnlyDuringDrag: showDragTargetOnlyDuringDrag,
       dropTargetSize: dropTargetSize,
       debugShowDragTarget: debugShowDragTarget,
+      draggableBehaviour: draggableBehaviour,
     );
   }
 }
@@ -158,6 +160,7 @@ class _NestedReorderableList<T> extends StatefulWidget {
     required this.showDragTargetOnlyDuringDrag,
     required this.dropTargetSize,
     required this.debugShowDragTarget,
+    required this.draggableBehaviour,
   });
   final List<DragAndDropItem<T>> dragAndDropItems;
   final DragAndDropItemBuilder<T> itemBuilder;
@@ -165,6 +168,7 @@ class _NestedReorderableList<T> extends StatefulWidget {
   final bool showDragTargetOnlyDuringDrag;
   final double dropTargetSize;
   final bool debugShowDragTarget;
+  final DraggableBehaviour draggableBehaviour;
 
   @override
   _NestedReorderableListState<T> createState() => _NestedReorderableListState();
@@ -212,9 +216,7 @@ class _NestedReorderableListState<T> extends State<_NestedReorderableList<T>> {
       children: [
         Row(
           children: [
-            SizedBox(
-              width: level * _spaceSize,
-            ),
+            SizedBox(width: level * _spaceSize),
             Expanded(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -230,9 +232,7 @@ class _NestedReorderableListState<T> extends State<_NestedReorderableList<T>> {
                         : Colors.transparent,
                     dragTargetSize: 0,
                   ),
-                  if (_shouldShowDragTarget(
-                    category: category,
-                  ))
+                  if (_shouldShowDragTarget(category: category))
                     _buildDragTarget(
                       category: category,
                       index: index,
@@ -248,16 +248,11 @@ class _NestedReorderableListState<T> extends State<_NestedReorderableList<T>> {
           for (final child in category.children)
             _buildListItem(
               category: child,
-              index: category.children.indexOf(
-                child,
-              ),
+              index: category.children.indexOf(child),
               level: level + 1,
               parent: category,
             ),
-        if (_shouldShowEmptyChildDragTarget(
-          category,
-          level,
-        ))
+        if (_shouldShowEmptyChildDragTarget(category, level))
           _buildLineDragTarget(
             category: category,
             index: index,
@@ -289,9 +284,7 @@ class _NestedReorderableListState<T> extends State<_NestedReorderableList<T>> {
     );
   }
 
-  bool _shouldShowDragTarget({
-    required DragAndDropItem<T> category,
-  }) {
+  bool _shouldShowDragTarget({required DragAndDropItem<T> category}) {
     return _draggingCategory?.key != category.key;
   }
 
@@ -342,16 +335,12 @@ class _NestedReorderableListState<T> extends State<_NestedReorderableList<T>> {
         );
       },
       onWillAccept: (draggedData) {
-        return _handleOnWillAccept(
-          level,
-        );
+        return _handleOnWillAccept(level);
       },
       onAccept: (draggedData) {
         // For some reason, even if onWillAccept() is false,
         // onAccept() can sometimes be called, so we check here as well.
-        if (!_handleOnWillAccept(
-          level,
-        )) {
+        if (!_handleOnWillAccept(level)) {
           return;
         }
         _handleDragAccept(
@@ -390,7 +379,8 @@ class _NestedReorderableListState<T> extends State<_NestedReorderableList<T>> {
         return Row(
           children: [
             SizedBox(
-              width: ((insertPosition == InsertPosition.before && level > 0
+              width:
+                  ((insertPosition == InsertPosition.before && level > 0
                           ? 0
                           : level) +
                       (insertPosition == InsertPosition.asChild ? 1 : 0)) *
@@ -405,23 +395,16 @@ class _NestedReorderableListState<T> extends State<_NestedReorderableList<T>> {
                     child: widget.debugShowDragTarget
                         ? Text(
                             'index: $index, insertPosition: $insertPosition',
-                            style: const TextStyle(
-                              fontSize: 8,
-                            ),
+                            style: const TextStyle(fontSize: 8),
                           )
                         : null,
                   ),
                   if (_dropTargetCategory?.key == category.key &&
                       _dropPosition == insertPosition &&
-                      _handleOnWillAccept(
-                        level,
-                      ))
+                      _handleOnWillAccept(level))
                     Opacity(
                       opacity: 0.2,
-                      child: widget.itemBuilder(
-                        context,
-                        _draggingCategory!,
-                      ),
+                      child: widget.itemBuilder(context, _draggingCategory!),
                     ),
                 ],
               ),
@@ -430,16 +413,12 @@ class _NestedReorderableListState<T> extends State<_NestedReorderableList<T>> {
         );
       },
       onWillAccept: (draggedData) {
-        return _handleOnWillAccept(
-          level,
-        );
+        return _handleOnWillAccept(level);
       },
       onAccept: (draggedData) {
         // For some reason, even if onWillAccept() is false,
         // onAccept() can sometimes be called, so we check here as well.
-        if (!_handleOnWillAccept(
-          level,
-        )) {
+        if (!_handleOnWillAccept(level)) {
           return;
         }
         _handleDragAccept(
@@ -475,6 +454,53 @@ class _NestedReorderableListState<T> extends State<_NestedReorderableList<T>> {
     required int level,
     DragAndDropItem<T>? parent,
   }) {
+    if (widget.draggableBehaviour == DraggableBehaviour.instant) {
+      return Draggable<Map<String, dynamic>>(
+        data: {
+          'category': category,
+          'index': index,
+          'level': level,
+          'parent': parent,
+        },
+        feedback: Card(
+          elevation: 8,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width - level * 30.0,
+            ),
+            child: Material(child: widget.itemBuilder(context, category)),
+          ),
+        ),
+        childWhenDragging: const SizedBox.shrink(),
+        onDragStarted: () {
+          setState(() {
+            _dragging = true;
+            _draggingCategory = category;
+          });
+        },
+        onDragCompleted: () {
+          setState(() {
+            _dragging = false;
+            _draggingCategory = null;
+            _dropTargetCategory = null;
+            _dropPosition = null;
+          });
+        },
+        onDraggableCanceled: (_, __) {
+          setState(() {
+            _dragging = false;
+            _draggingCategory = null;
+            _dropTargetCategory = null;
+            _dropPosition = null;
+          });
+        },
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [Material(child: widget.itemBuilder(context, category))],
+        ),
+      );
+    }
+
     return LongPressDraggable<Map<String, dynamic>>(
       data: {
         'category': category,
@@ -488,12 +514,7 @@ class _NestedReorderableListState<T> extends State<_NestedReorderableList<T>> {
           constraints: BoxConstraints(
             maxWidth: MediaQuery.of(context).size.width - level * 30.0,
           ),
-          child: Material(
-            child: widget.itemBuilder(
-              context,
-              category,
-            ),
-          ),
+          child: Material(child: widget.itemBuilder(context, category)),
         ),
       ),
       childWhenDragging: const SizedBox.shrink(),
@@ -521,22 +542,12 @@ class _NestedReorderableListState<T> extends State<_NestedReorderableList<T>> {
       },
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        children: [
-          Material(
-            child: widget.itemBuilder(
-              context,
-              category,
-            ),
-          ),
-        ],
+        children: [Material(child: widget.itemBuilder(context, category))],
       ),
     );
   }
 
-  bool _shouldShowEmptyChildDragTarget(
-    DragAndDropItem<T> category,
-    int level,
-  ) {
+  bool _shouldShowEmptyChildDragTarget(DragAndDropItem<T> category, int level) {
     return level == 0 &&
         category.children.isEmpty &&
         category.key != _draggingCategory?.key &&
@@ -567,9 +578,7 @@ class _NestedReorderableListState<T> extends State<_NestedReorderableList<T>> {
     final draggedCategoryIndex = draggedData['index'] as int;
     final draggedCategoryParent = draggedData['parent'] as DragAndDropItem<T>?;
     final sourceParentIndex = draggedCategoryParent != null
-        ? widget.dragAndDropItems.indexOf(
-            draggedCategoryParent,
-          )
+        ? widget.dragAndDropItems.indexOf(draggedCategoryParent)
         : null;
     final sourceLocation = SourceLocation(
       parentIndex: sourceParentIndex,
@@ -577,8 +586,9 @@ class _NestedReorderableListState<T> extends State<_NestedReorderableList<T>> {
     );
 
     final draggedCategory = sourceLocation.parentIndex != null
-        ? widget.dragAndDropItems[sourceLocation.parentIndex!]
-            .children[sourceLocation.index]
+        ? widget
+              .dragAndDropItems[sourceLocation.parentIndex!]
+              .children[sourceLocation.index]
         : widget.dragAndDropItems[sourceLocation.index];
 
     final destinationLocation = getDestinationLocation(
@@ -590,11 +600,7 @@ class _NestedReorderableListState<T> extends State<_NestedReorderableList<T>> {
       dragAndDropItems: widget.dragAndDropItems,
     );
 
-    widget.onReorder(
-      sourceLocation,
-      destinationLocation,
-      draggedCategory,
-    );
+    widget.onReorder(sourceLocation, destinationLocation, draggedCategory);
   }
 }
 
@@ -623,21 +629,21 @@ DestinationLocation getDestinationLocation<T>({
   // the dragged point, and the InsertPosition is before,
   // we reduce the index by 1
   // (since one element has been pulled out by the drag).
-  final indexDiff = draggedCategoryParent?.key == parent?.key &&
+  final indexDiff =
+      draggedCategoryParent?.key == parent?.key &&
           index > draggedCategoryIndex &&
           insertPosition == InsertPosition.before
       ? 1
       : 0;
 
-  final indexDiff2 = draggedCategoryParent?.key != parent?.key &&
+  final indexDiff2 =
+      draggedCategoryParent?.key != parent?.key &&
           insertPosition == InsertPosition.after
       ? 1
       : 0;
 
   final destinationParentIndex = parent != null
-      ? dragAndDropItems.indexOf(
-          parent,
-        )
+      ? dragAndDropItems.indexOf(parent)
       : null;
 
   return DestinationLocation(
@@ -646,3 +652,5 @@ DestinationLocation getDestinationLocation<T>({
     insertPosition: insertPosition,
   );
 }
+
+enum DraggableBehaviour { instant, longPress }
